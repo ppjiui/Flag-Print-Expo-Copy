@@ -1,0 +1,635 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Sticky Notes – Print Rotate</title>
+  <style>
+    :root {
+      --note-width: 27.0mm; /* 1 inch */
+      --note-height: 47.0mm; /* 1.7 inches */
+      --gap: 6mm;
+      --margin: 10mm;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: #f0f0f0;
+      display: flex;
+      justify-content: center;
+      align-items: flex-start;
+      min-height: 100vh;
+      gap: 20px;
+      font-family: sans-serif;
+    }
+
+    .sheet {
+      width: 210mm;
+      height: 297mm;
+      padding: var(--margin);
+      display: grid;
+      grid-template-columns: repeat(3, var(--note-width));
+      grid-template-rows: repeat(8, var(--note-height));
+      gap: var(--gap);
+      background: white;
+      border: 1px solid #ccc;
+      box-shadow: 0 0 8px rgba(0,0,0,0.1);
+      overflow: hidden;
+    }
+
+    .note {
+      width: var(--note-width);
+      height: var(--note-height);
+      border: 1px solid #000;
+      background: #fff;
+      overflow: hidden;
+      position: relative;
+    }
+
+    .note-content {
+      width: 100%;
+      height: 100%;
+      padding: 6px;
+      font-size: 14px;
+      line-height: 1.2;
+      overflow: hidden;
+      cursor: text;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: flex-start;
+      text-align: center;
+    }
+
+    .note-content[contenteditable="true"]:focus {
+      outline: 2px solid #007bff;
+    }
+
+    .note-content img {
+      max-width: 100%;
+      height: auto;
+      display: block;
+      margin: 0 auto;
+    }
+
+    @media print {
+      body {
+        background: none;
+        display: block;
+        margin: 0;
+        padding: 0;
+      }
+
+      .sheet {
+        margin: 0;
+        padding: var(--margin);
+        -webkit-print-color-adjust: exact;
+        box-shadow: none;
+        border: none;
+        width: 210mm;
+        height: 297mm;
+        overflow: hidden;
+        page-break-after: avoid;
+        grid-template-columns: repeat(3, var(--note-height));
+        grid-template-rows: repeat(8, var(--note-width));
+      }
+
+      .note {
+        width: var(--note-height) !important;
+        height: var(--note-width) !important;
+        border: none !important;
+      }
+
+      .sheet.show-borders .note {
+        border: 1px solid #000 !important;
+      }
+
+      .note-content {
+        transform: rotate(270deg) translateX(-75%);
+        transform-origin: top left;
+        width: var(--note-height);
+        height: var(--note-width);
+        position: absolute;
+        top: 0;
+        left: 0;
+        display: flex !important;
+        flex-direction: column;
+        align-items: center;
+        justify-content: flex-start;
+        text-align: center;
+        white-space: pre-wrap;
+        overflow: hidden !important;
+        padding: 6px !important;
+      }
+
+      .note-content img {
+        transform: rotate(-90deg) !important;
+      }
+
+      .note.empty-note {
+        display: none !important;
+      }
+
+      #print-btn, #toggle-borders-btn, #button-container, #style-controls, #copy-buttons, #unit-number-controls {
+        display: none !important;
+      }
+    }
+
+    #button-container {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      align-self: flex-start;
+      position: sticky;
+      top: 20px;
+    }
+
+    #style-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+      width: 200px;
+      font-size: 14px;
+    }
+
+    #unit-number-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 10px;
+      width: 200px;
+      padding: 10px;
+      background: #f8f9fa;
+      border-radius: 5px;
+    }
+
+    #copy-buttons {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      margin-top: 20px;
+      width: 200px;
+    }
+
+    label {
+      font-weight: 600;
+      margin-bottom: 4px;
+      display: block;
+    }
+
+    input[type="range"] {
+      width: 100%;
+    }
+
+    input[type="color"] {
+      width: 100%;
+      height: 32px;
+      border: none;
+      padding: 0;
+      cursor: pointer;
+      background: none;
+    }
+
+    textarea {
+      width: 100%;
+      padding: 8px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 14px;
+      min-height: 100px;
+      resize: vertical;
+    }
+
+    button {
+      padding: 12px 20px;
+      background-color: #007bff;
+      color: white;
+      border: none;
+      border-radius: 5px;
+      font-size: 16px;
+      cursor: pointer;
+      user-select: none;
+      box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+      transition: background-color 0.3s ease;
+      height: fit-content;
+    }
+
+    button:hover {
+      background-color: #0056b3;
+    }
+
+    .copy-btn {
+      background-color: #17a2b8;
+    }
+
+    .copy-btn:hover {
+      background-color: #138496;
+    }
+
+    .unit-number-btn {
+      background-color: #6c757d;
+    }
+
+    .unit-number-btn:hover {
+      background-color: #5a6268;
+    }
+    
+    .formatted-unit {
+      color: red;
+      font-size: 25px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 1.2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .copy-text {
+      color: red;
+      font-size: 25px;
+      font-weight: bold;
+      text-align: center;
+      line-height: 1.2;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    /* Rotated content for unit numbers */
+    .rotated-content {
+      transform: rotate(180deg);
+      transform-origin: center;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding-left: 20px; /* adjust as needed to nudge right pravin */
+      padding-top: 32px;  /* nudge right */s	
+    }
+  </style>
+</head>
+<body>
+  <div class="sheet" id="sheet">
+    <!-- 3 columns × 8 rows = 24 notes -->
+    <div class="note"><div class="note-content" contenteditable="true">Note 1</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 2</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 3</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 4</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 5</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 6</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 7</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 8</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 9</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 10</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 11</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 12</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 13</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 14</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 15</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 16</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 17</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 18</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 19</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 20</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 21</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 22</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 23</div></div>
+    <div class="note"><div class="note-content" contenteditable="true">Note 24</div></div>
+  </div>
+
+  <div id="button-container">
+    <button id="print-btn" title="Print Sticky Notes">Print</button>
+    <button id="toggle-borders-btn" title="Toggle Borders On/Off for Print">Borders: OFF</button>
+
+    <div id="style-controls">
+      <label for="font-size-control">Font Size: <span id="font-size-value">14</span>px</label>
+      <input type="range" id="font-size-control" min="8" max="200" value="14" step="1" />
+
+      <label for="color-picker-control">Text Color:</label>
+      <input type="color" id="color-picker-control" value="#000000" />
+
+      <label for="letter-spacing-control">Letter Spacing: <span id="letter-spacing-value">0</span>px</label>
+      <input type="range" id="letter-spacing-control" min="0" max="10" value="0" step="0.5" />
+      
+      <label for="line-height-control">Line Height: <span id="line-height-value">1.2</span></label>
+      <input type="range" id="line-height-control" min="0.8" max="3" value="1.2" step="0.1" />
+    </div>
+
+    <div id="unit-number-controls">
+      <label for="unit-numbers-input">Unit Numbers (one per line):</label>
+      <textarea id="unit-numbers-input" placeholder="Paste unit numbers here, one per line&#10;Example:&#10;AW42-210&#10;AW42-110&#10;AW22-G01"></textarea>
+      <button id="apply-unit-numbers-btn" class="unit-number-btn">Apply Unit Numbers</button>
+      <button id="clear-notes-btn" class="unit-number-btn">Clear All Notes</button>
+    </div>
+
+    <div id="copy-buttons">
+      <button id="digital-copy-btn" class="copy-btn">Digital Copy</button>
+      <button id="client-copy-btn" class="copy-btn">Client Copy</button>
+    </div>
+  </div>
+
+  <script>
+    const defaultNotes = Array(24).fill().map((_, i) => `Note ${i+1}`);
+
+    const noteElements = document.querySelectorAll('.note');
+
+    function checkAndMarkEmptyNotes() {
+      noteElements.forEach((note, index) => {
+        const content = note.querySelector('.note-content').innerText.trim();
+        if (content === defaultNotes[index]) {
+          note.classList.add('empty-note');
+        } else {
+          note.classList.remove('empty-note');
+        }
+      });
+    }
+
+    // Trigger this check right before printing
+    document.getElementById('print-btn').addEventListener('click', () => {
+      checkAndMarkEmptyNotes();
+      window.print();
+    });
+
+    // Allow paste of images
+    document.querySelectorAll('.note-content').forEach(note => {
+      note.addEventListener('paste', function (event) {
+        const items = event.clipboardData.items;
+        for (const item of items) {
+          if (item.type.indexOf("image") !== -1) {
+            const blob = item.getAsFile();
+            const reader = new FileReader();
+            reader.onload = function (evt) {
+              const img = document.createElement("img");
+              img.src = evt.target.result;
+              img.style.maxWidth = '100%';
+              img.style.display = 'block';
+              img.style.margin = '0 auto';
+              note.appendChild(img);
+            };
+            reader.readAsDataURL(blob);
+          }
+        }
+      });
+    });
+
+    const sheet = document.getElementById('sheet');
+    const toggleBtn = document.getElementById('toggle-borders-btn');
+    toggleBtn.addEventListener('click', () => {
+      sheet.classList.toggle('show-borders');
+      toggleBtn.textContent = sheet.classList.contains('show-borders') ? 'Borders: ON' : 'Borders: OFF';
+    });
+
+    const fontSizeControl = document.getElementById('font-size-control');
+    const colorPickerControl = document.getElementById('color-picker-control');
+    const letterSpacingControl = document.getElementById('letter-spacing-control');
+    const lineHeightControl = document.getElementById('line-height-control');
+
+    const fontSizeValue = document.getElementById('font-size-value');
+    const letterSpacingValue = document.getElementById('letter-spacing-value');
+    const lineHeightValue = document.getElementById('line-height-value');
+
+    function applyStyleToSelection(styleProp, value) {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return;
+      const range = selection.getRangeAt(0);
+      if (range.collapsed) return;
+
+      const span = document.createElement('span');
+      if (styleProp === 'fontSize') span.style.fontSize = value + 'px';
+      if (styleProp === 'color') span.style.color = value;
+      if (styleProp === 'letterSpacing') span.style.letterSpacing = value + 'px';
+      if (styleProp === 'lineHeight') span.style.lineHeight = value;
+
+      const extracted = range.extractContents();
+      span.appendChild(extracted);
+      range.insertNode(span);
+      selection.removeAllRanges();
+      const newRange = document.createRange();
+      newRange.selectNodeContents(span);
+      selection.addRange(newRange);
+    }
+
+    function applyLineHeightToNote(note, lineHeight) {
+      note.style.lineHeight = lineHeight;
+    }
+
+    fontSizeControl.addEventListener('input', () => {
+      const size = fontSizeControl.value;
+      fontSizeValue.textContent = size;
+      applyStyleToSelection('fontSize', size);
+    });
+
+    colorPickerControl.addEventListener('input', () => {
+      applyStyleToSelection('color', colorPickerControl.value);
+    });
+
+    letterSpacingControl.addEventListener('input', () => {
+      const spacing = letterSpacingControl.value;
+      letterSpacingValue.textContent = spacing;
+      applyStyleToSelection('letterSpacing', spacing);
+    });
+
+    lineHeightControl.addEventListener('input', () => {
+      const lineHeight = lineHeightControl.value;
+      lineHeightValue.textContent = lineHeight;
+      
+      // Apply to selection if there is one
+      const selection = window.getSelection();
+      if (selection && !selection.isCollapsed) {
+        applyStyleToSelection('lineHeight', lineHeight);
+      }
+      // Otherwise apply to last focused note
+      else if (lastFocusedNote) {
+        applyLineHeightToNote(lastFocusedNote, lineHeight);
+      }
+    });
+
+    function getFontSizeAtSelection() {
+      const selection = window.getSelection();
+      if (!selection.rangeCount) return null;
+      const range = selection.getRangeAt(0);
+      let node = range.startContainer;
+      if (node.nodeType === Node.TEXT_NODE) {
+        node = node.parentNode;
+      }
+      if (!node.closest || !node.closest('.note-content')) return null;
+      const style = window.getComputedStyle(node);
+      return style.fontSize;
+    }
+
+    document.addEventListener('selectionchange', () => {
+      const fontSize = getFontSizeAtSelection();
+      if (fontSize) {
+        const sizeNum = parseInt(fontSize, 10);
+        if (fontSizeControl.value != sizeNum) {
+          fontSizeControl.value = sizeNum;
+          fontSizeValue.textContent = sizeNum;
+        }
+      }
+    });
+
+    // Track the last focused note
+    let lastFocusedNote = null;
+
+    // Update lastFocusedNote when a note is clicked
+    document.querySelectorAll('.note-content').forEach(note => {
+      note.addEventListener('focus', () => {
+        lastFocusedNote = note;
+      });
+    });
+
+    // Function to format unit numbers according to specifications
+    function formatUnitNumber(unitNumber) {
+      // Remove any existing whitespace
+      unitNumber = unitNumber.trim();
+      
+      // TH format: TH1-035 → TH1-\n035
+      if (unitNumber.startsWith('TH')) {
+        const dashIndex = unitNumber.indexOf('-');
+        if (dashIndex > -1) {
+          return `${unitNumber.substring(0, dashIndex + 1)}<br>${unitNumber.substring(dashIndex + 1)}`;
+        }
+      }
+      // M format: M-T1-709 → M-T1-\n709
+      else if (unitNumber.startsWith('M')) {
+        const lastDashIndex = unitNumber.lastIndexOf('-');
+        if (lastDashIndex > -1) {
+          return `${unitNumber.substring(0, lastDashIndex + 1)}<br>${unitNumber.substring(lastDashIndex + 1)}`;
+        }
+      }
+      // Numeric format: 026 → 026 (no change)
+      else if (/^\d/.test(unitNumber)) {
+        return unitNumber;
+      }
+      // SDR format: SDR3-1308 → SDR3-\n1308
+      else if (unitNumber.startsWith('SDR')) {
+        const dashIndex = unitNumber.indexOf('-');
+        if (dashIndex > -1) {
+          return `${unitNumber.substring(0, dashIndex + 1)}<br>${unitNumber.substring(dashIndex + 1)}`;
+        }
+      }
+      // AW format: AW29-G03 → AW29-\nG03
+      else if (unitNumber.startsWith('AW')) {
+        const dashIndex = unitNumber.indexOf('-');
+        if (dashIndex > -1) {
+          return `${unitNumber.substring(0, dashIndex + 1)}<br>${unitNumber.substring(dashIndex + 1)}`;
+        }
+      }
+      // SR format: SR2910 → SR2\n910 (extract building number)
+      else if (unitNumber.startsWith('SR')) {
+        const buildingNumber = unitNumber.substring(2, 3);
+        const rest = unitNumber.substring(3);
+        return `SR${buildingNumber}<br>${rest}`;
+      }
+      // P format: P.5178 → P.\n5178
+      else if (unitNumber.startsWith('P')) {
+        const dotIndex = unitNumber.indexOf('.');
+        if (dotIndex > -1) {
+          return `${unitNumber.substring(0, dotIndex + 1)}<br>${unitNumber.substring(dotIndex + 1)}`;
+        }
+      }
+      
+      // Default case - return as is
+      return unitNumber;
+    }
+
+    // Function to insert formatted text into note
+    function insertFormattedText(text) {
+      if (!lastFocusedNote) {
+        alert('Please click inside a sticky note first to select it.');
+        return;
+      }
+
+      const formattedText = `<div class="copy-text">${text.replace(' ', '<br>')}</div>`;
+      
+      const selection = window.getSelection();
+      if (selection.rangeCount > 0 && lastFocusedNote.contains(selection.anchorNode)) {
+        // Insert at cursor position
+        const range = selection.getRangeAt(0);
+        if (!range.collapsed) {
+          range.deleteContents();
+        }
+        const div = document.createElement('div');
+        div.innerHTML = formattedText;
+        range.insertNode(div.firstChild);
+        
+        // Move cursor after the inserted text
+        const newRange = document.createRange();
+        newRange.setStartAfter(div.firstChild);
+        newRange.collapse(true);
+        selection.removeAllRanges();
+        selection.addRange(newRange);
+      } else {
+        // Replace entire content if no specific position is selected
+        lastFocusedNote.innerHTML = formattedText;
+      }
+
+      // Focus back on the note
+      lastFocusedNote.focus();
+    }
+
+    // Digital Copy button
+    document.getElementById('digital-copy-btn').addEventListener('click', () => {
+      insertFormattedText('DIGITAL COPY');
+    });
+
+    // Client Copy button
+    document.getElementById('client-copy-btn').addEventListener('click', () => {
+      insertFormattedText('CLIENT COPY');
+    });
+
+    // Unit number functionality
+    document.getElementById('apply-unit-numbers-btn').addEventListener('click', () => {
+      const unitNumbersText = document.getElementById('unit-numbers-input').value.trim();
+      if (!unitNumbersText) {
+        alert('Please enter unit numbers first');
+        return;
+      }
+
+      const unitNumbers = unitNumbersText.split('\n').filter(line => line.trim() !== '');
+      
+      noteElements.forEach((note, index) => {
+        const noteContent = note.querySelector('.note-content');
+        if (index < unitNumbers.length) {
+          // Format the unit number according to specifications
+          const formattedUnit = formatUnitNumber(unitNumbers[index]);
+          // Apply the formatted unit number with styling and rotation
+          noteContent.innerHTML = `
+            <div class="rotated-content">
+              <div class="formatted-unit">${formattedUnit}</div>
+            </div>
+          `;
+          note.classList.remove('empty-note');
+        } else if (noteContent.innerText.trim() === defaultNotes[index]) {
+          // Mark as empty if it's still a default note
+          note.classList.add('empty-note');
+        }
+      });
+    });
+
+    // Clear all notes functionality
+    document.getElementById('clear-notes-btn').addEventListener('click', () => {
+      noteElements.forEach((note, index) => {
+        const noteContent = note.querySelector('.note-content');
+        noteContent.innerHTML = defaultNotes[index];
+        note.classList.add('empty-note');
+      });
+      document.getElementById('unit-numbers-input').value = '';
+    });
+  </script>
+</body>
+</html>
